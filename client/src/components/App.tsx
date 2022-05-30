@@ -25,8 +25,8 @@ const App = () => {
   }, []);
 
   const handleLogin = (res) => {
-    console.log(`Logged in as ${res.profileObj.name}`);
-    const userToken = res.tokenObj.id_token;
+    console.log(res);
+    const userToken = res.credential;
     post("/api/login", { token: userToken }).then((user) => {
       setUserId(user._id);
       post("/api/initsocket", { socketid: socket.id });
