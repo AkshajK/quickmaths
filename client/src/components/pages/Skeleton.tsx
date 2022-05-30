@@ -1,27 +1,33 @@
-import React, { Component } from "react";
-import GoogleLogin, { GoogleLogout } from "react-google-login";
-
-import "../../utilities.css";
+import React from "react";
+import GoogleLogin, {
+  GoogleLoginResponse,
+  GoogleLoginResponseOffline,
+  GoogleLogout,
+} from "react-google-login";
 import "./Skeleton.css";
-
-//TODO: REPLACE WITH YOUR OWN CLIENT_ID
-const GOOGLE_CLIENT_ID = "121479668229-t5j82jrbi9oejh7c8avada226s75bopn.apps.googleusercontent.com";
-
-const Skeleton = ({ userId, handleLogin, handleLogout }) => {
+import { RouteComponentProps } from "@reach/router";
+//TODO(weblab student): REPLACE WITH YOUR OWN CLIENT_ID
+const GOOGLE_CLIENT_ID = "180080882825-to464u7earqlme8o2muc5e0bqll8llih.apps.googleusercontent.com";
+type Props = RouteComponentProps & {
+  userId: String;
+  handleLogin: (res: GoogleLoginResponse | GoogleLoginResponseOffline) => void;
+  handleLogout: () => void;
+};
+const Skeleton = (props: Props) => {
   return (
     <>
-      {userId ? (
+      {props.userId ? (
         <GoogleLogout
           clientId={GOOGLE_CLIENT_ID}
           buttonText="Logout"
-          onLogoutSuccess={handleLogout}
-          onFailure={(err) => console.log(err)}
+          onLogoutSuccess={props.handleLogout}
+          onFailure={() => console.log(`Failed to logout.`)}
         />
       ) : (
         <GoogleLogin
           clientId={GOOGLE_CLIENT_ID}
           buttonText="Login"
-          onSuccess={handleLogin}
+          onSuccess={props.handleLogin}
           onFailure={(err) => console.log(err)}
         />
       )}
@@ -40,7 +46,9 @@ const Skeleton = ({ userId, handleLogin, handleLogout }) => {
         <li>Change the Database Name for MongoDB to whatever you put in the SRV (server.js)</li>
       </ul>
       <h2>How to go from this skeleton to our actual app</h2>
-      <a href="https://docs.google.com/document/d/110JdHAn3Wnp3_AyQLkqH2W8h5oby7OVsYIeHYSiUzRs/edit?usp=sharing">Check out this getting started guide</a>
+      <a href="https://docs.google.com/document/d/110JdHAn3Wnp3_AyQLkqH2W8h5oby7OVsYIeHYSiUzRs/edit?usp=sharing">
+        Check out this getting started guide
+      </a>
     </>
   );
 };

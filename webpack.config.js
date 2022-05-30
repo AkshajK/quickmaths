@@ -17,7 +17,7 @@
 */
 
 const path = require("path");
-const entryFile = path.resolve(__dirname, "client", "src", "index.js");
+const entryFile = path.resolve(__dirname, "client", "src", "index.tsx");
 const outputDir = path.resolve(__dirname, "client", "dist");
 
 const webpack = require("webpack");
@@ -29,13 +29,25 @@ module.exports = {
     publicPath: "/",
     filename: "bundle.js",
   },
-  devtool: "inline-source-map",
+  devtool: "source-map",
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/,
+        test: /\.jsx?$/,
         loader: "babel-loader",
         exclude: /node_modules/,
+      },
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: "ts-loader",
+            options: {
+              configFile: "client-tsconfig.json",
+            },
+          },
+        ],
       },
       {
         test: /\.(scss|css)$/,
@@ -59,7 +71,7 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ["*", ".js", ".jsx"],
+    extensions: ["*", ".js", ".jsx", ".ts", ".tsx"],
   },
   plugins: [new webpack.HotModuleReplacementPlugin()],
   devServer: {
