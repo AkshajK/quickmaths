@@ -1,6 +1,15 @@
 import express from "express";
 import auth from "./auth";
 import socketManager from "./server-socket";
+
+import User from "./models/user";
+import Game from "./models/game";
+import Level from "./models/level";
+import Message from "./models/message";
+import Question from "./models/question";
+import QuestionType from "./models/questiontype";
+import Room from "./models/room";
+
 const router = express.Router();
 
 router.post("/login", auth.login);
