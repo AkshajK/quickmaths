@@ -1,14 +1,14 @@
 import { Schema, model, Document } from "mongoose";
 
 const QuestionSchema = new Schema({
-  gameId: String,
+  number: Number,
   prompt: String,
   answer: Number,
   questionTypeId: String,
 });
 
 export interface Question extends Document {
-  gameId: string;
+  number: number;
   prompt: string;
   answer?: number;
   questionTypeId: string;

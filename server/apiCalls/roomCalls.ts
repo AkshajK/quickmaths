@@ -22,6 +22,8 @@ import {
   startGameResponseType,
   lock,
   messageSocketEmitType,
+  startGameSocketEmitType,
+  guessSocketEmitType,
 } from "../../shared/apiTypes";
 import UserModel from "../models/user";
 import RoomModel from "../models/room";
@@ -32,11 +34,13 @@ import MessageModel from "../models/message";
 import socketManager from "../server-socket";
 import e from "express";
 
+const fromNow = (seconds: number): Date => new Date(new Date().getTime() + seconds * 1000);
+
 const joinRoomPage = async (
   req: TypedRequestBody<joinRoomPageRequestBodyType>,
   res: TypedResponse<joinRoomPageResponseType | string>
 ) => {
-  let room = await RoomModel.findOne({ name: req.body.roomName });
+  let room: Room = await RoomModel.findOne({ name: req.body.roomName });
   lock.acquire(room._id, async () => {
     room = await RoomModel.findOne({ name: req.body.roomName });
 
@@ -90,12 +94,111 @@ const joinRoomPage = async (
 const startGame = (
   req: TypedRequestBody<startGameRequestBodyType>,
   res: TypedResponse<startGameResponseType>
-) => {};
+) => {
+  lock.acquire(req.body.roomId, async () => {
+    const room: Room = await RoomModel.findById(req.body.roomId);
+    const roomUsers = await UserModel.find({ _id: { $in: room.users } });
+    /** TODO: Replace with actual question generation code */
+    var questions = [];
+    for (var i = 0; i < 100; i++) {
+      const a = Math.floor(Math.random() * 100);
+      const b = Math.floor(Math.random() * 100);
+      const question = new QuestionModel({
+        number: i - 1,
+        prompt: `What is ${a} + ${b}?`,
+        answer: a + b,
+        questionTypeId: "",
+      });
+      questions.push(question.save());
+    }
+    const savedQuestions: Question[] = await Promise.all(questions);
+    /** END TODO */
+    const startTime = fromNow(3);
+    const scores = roomUsers.map((user) => ({
+      userId: user._id,
+      name: user.name,
+      questionNumber: 0,
+      score: 0,
+    }));
+    const timeLimit = 30;
+    const game = new GameModel({
+      status: "aboutToStart",
+      host: req.user._id,
+      questions: savedQuestions,
+      scores,
+      startTime,
+      timeLimit,
+    });
+
+    const savedGame = await game.save();
+    room.inProgress = true;
+    room.gameId = room.gameId.concat(game._id);
+    room.lastActive = new Date();
+    await room.save();
+    const data: startGameSocketEmitType = { startTime, scores };
+    socketManager.getIo().in(room._id).emit("aboutToStart", data);
+    setTimeout(
+      () => setGameToStarted(room._id, game._id),
+      startTime.getTime() - new Date().getTime()
+    );
+    setTimeout(
+      () => setGameToComplete(room._id, game._id),
+      startTime.getTime() + timeLimit * 1000 - new Date().getTime()
+    );
+  });
+};
+
+const setGameToStarted = async (roomId: string, gameId: string) => {
+  lock.acquire(roomId, async () => {
+    const room: Room = await RoomModel.findById(roomId);
+    const game: Game = await GameModel.findById(gameId);
+    room.inProgress = true;
+    game.status = "inProgress";
+    await room.save();
+    await game.save();
+    socketManager.getIo().in(roomId).emit("inProgress", { question: game.questions[0] });
+  });
+};
+
+const setGameToComplete = async (roomId: string, gameId: string) => {
+  lock.acquire(roomId, async () => {
+    const room: Room = await RoomModel.findById(roomId);
+    const game: Game = await GameModel.findById(gameId);
+    room.inProgress = false;
+    game.status = "complete";
+    await room.save();
+    await game.save();
+    socketManager.getIo().in(roomId).emit("complete", {});
+  });
+};
 
 const guess = (
   req: TypedRequestBody<guessRequestBodyType>,
   res: TypedResponse<guessResponseType>
-) => {};
+) => {
+  lock.acquire(req.body.roomId, async () => {
+    const room: Room = await RoomModel.findById(req.body.roomId);
+    const game: Game = await GameModel.findById(room.gameId.slice(-1)[0]);
+    const index = game.scores.findIndex((score) => score.userId === req.user._id);
+    const question: Question = await QuestionModel.findById(
+      game.questions[game.scores[index].questionNumber]
+    );
+    const correct = question.answer === req.body.answer;
+    const nextQuestion: Question | undefined =
+      correct &&
+      (await QuestionModel.findById(game.questions[game.scores[index].questionNumber + 1]));
+    game.scores[index]["questionNumber"] += correct ? 1 : 0;
+    game.scores[index]["score"] += correct ? 1 : 0;
+    game.markModified("scores");
+    const savedGame: Game = await game.save();
+    const data: guessSocketEmitType = { roomId: room._id, scores: savedGame.scores };
+    socketManager.getIo().in(room._id).emit("guess", data);
+    res.status(200).json({
+      question: correct && nextQuestion,
+      correct,
+    });
+  });
+};
 
 const message = async (
   req: TypedRequestBody<messageRequestBodyType>,
