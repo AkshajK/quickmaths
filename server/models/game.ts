@@ -9,11 +9,13 @@ const GameSchema = new Schema({
   timeLimit: Number,
 });
 
+export type Score = { userId: string; name: string; questionNumber: number; score: number };
+
 export interface Game extends Document {
-  status: "waiting" | "inProgress" | "complete";
+  status: "aboutToStart" | "inProgress" | "complete";
   host: string;
-  questions: [string]; // questionIds
-  scores: [{ userId: string; name: string; questionNumber: number; score: number }]; // when game starts, initialize scores with all the participants,
+  questions: string[]; // questionIds
+  scores: Score[]; // when game starts, initialize scores with all the participants,
   startTime: Date;
   timeLimit: number;
   _id: string;

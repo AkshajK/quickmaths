@@ -1,17 +1,17 @@
-import User from "../models/user";
-import Game from "../models/game";
-import Level from "../models/level";
-import Message from "../models/message";
-import Question from "../models/question";
-import QuestionType from "../models/questiontype";
-import Room from "../models/room";
+import User from "../../shared/user";
+import Game from "../../shared/game";
+import Level from "../../shared/level";
+import Message from "../../shared/message";
+import Question from "../../shared/question";
+import QuestionType from "../../shared/questiontype";
+import Room from "../../shared/room";
 import {
   TypedRequestBody,
   TypedResponse,
-  newDistributionRequestBodyType,
-  newDistributionResponseType,
-  saveDistributionRequestBodyType,
-  saveDistributionResponseType,
+  newLevelRequestBodyType,
+  newLevelResponseType,
+  saveLevelRequestBodyType,
+  saveLevelResponseType,
   tryCodeRequestBodyType,
   tryCodeResponseType,
   newQuestionTypeRequestBodyType,
@@ -20,14 +20,14 @@ import {
   saveQuestionTypeResponseType,
 } from "../../shared/apiTypes";
 
-const newDistribution = (
-  req: TypedRequestBody<newDistributionRequestBodyType>,
-  res: TypedResponse<newDistributionResponseType>
+const newLevel = (
+  req: TypedRequestBody<newLevelRequestBodyType>,
+  res: TypedResponse<newLevelResponseType>
 ) => {};
 
-const saveDistribution = (
-  req: TypedRequestBody<saveDistributionRequestBodyType>,
-  res: TypedResponse<saveDistributionResponseType>
+const saveLevel = (
+  req: TypedRequestBody<saveLevelRequestBodyType>,
+  res: TypedResponse<saveLevelResponseType>
 ) => {};
 
 const tryCode = (
@@ -44,3 +44,11 @@ const saveQuestionType = (
   req: TypedRequestBody<saveQuestionTypeRequestBodyType>,
   res: TypedResponse<saveQuestionTypeResponseType>
 ) => {};
+
+export default {
+  newLevel,
+  saveLevel,
+  tryCode,
+  newQuestionType,
+  saveQuestionType,
+};

@@ -2,7 +2,13 @@ import Express from "express";
 import { Query, Send } from "express-serve-static-core";
 import Room from "./Room";
 import Game from "./Game";
+import Score from "./Score";
+import Message from "./Message";
 import Question from "./Question";
+import Level from "./Level";
+var AsyncLock = require("async-lock");
+
+export const lock = new AsyncLock();
 
 export interface TypedRequestBody<T> extends Express.Request {
   body: T;
@@ -14,25 +20,26 @@ export interface TypedResponse<ResBody> extends Express.Response {
   json: Send<ResBody, this>;
 }
 
+export type Leaderboard = {
+  topRatings: { userId: string; userName: string; rating: number }[]; // top 100 ratings
+  topScores: { userId: string; userName: string; score: number }[]; // top 100 scores
+};
+
 export type joinLobbyPageRequestBodyType = { levelId: string };
 
 export type joinLobbyPageResponseType = {
-  leaderboard: {
-    topRatings: [{ userId: string; userName: string; rating: number }]; // top 100 ratings
-    topScores: [{ userId: string; userName: string; score: number }]; // top 100 scores
-  };
-  levels: [{ levelId: string; name: string }];
-  rooms: [
-    {
-      gameStatus: "waiting" | "inProgress" | "complete";
-      host: string;
-      players: number;
-      levelName: string;
-      lastActive: Date;
-    }
-  ]; // only waiting and inProgress rooms
+  leaderboard: Leaderboard;
+  levels: { _id: string; title: string }[];
+  rooms: {
+    inProgress: boolean;
+    host: string;
+    players: number;
+    levelName: string;
+    lastActive: Date;
+    name: string;
+  }[]; // only waiting and inProgress rooms
   userInfo: {
-    userId: string;
+    _id: string;
     name: string;
     rating: number;
     highScore: number;
@@ -45,37 +52,50 @@ export type createRoomResponseType = { room: Room };
 
 export type createRoomSocketEmitType = { room: Room };
 
-export type joinRoomPageRequestBodyType = { roomId: string };
+export type joinRoomPageRequestBodyType = { roomName: string; spectating?: boolean };
 
-export type joinRoomPageResponseType = { room: Room; game: Game; question: Question };
+export type joinRoomPageResponseType = {
+  status: "waiting" | "aboutToStart" | "inProgress" | "complete";
+  levelName: string;
+  users: { name: string; rating: string; _id: string }[];
+  spectatingUsers: string[];
+  spectating: boolean;
+  roomId: string;
+  // in Progress
+  question?: Question;
+  // in Progress or about to start
+  startTime?: Date;
+  // in Progress or compolete or about to start
+  scores?: Score[];
+};
 
-export type joinRoomPageSocketEmitType = { roomId: string; userId: string };
+export type joinRoomPageSocketEmitType = { roomName: string; userId: string };
 
 export type startGameRequestBodyType = { roomId: string };
 
 export type startGameResponseType = { error: boolean };
 
-export type startGameSocketEmitType = {};
+export type startGameSocketEmitType = { startTime: Date; scores: Score[] };
 
-export type guessRequestBodyType = {};
+export type guessRequestBodyType = { roomId: string; answer: number };
 
-export type guessResponseType = {};
+export type guessResponseType = { correct: boolean; question?: Question };
 
-export type guessSocketEmitType = {};
+export type guessSocketEmitType = { roomId: string; scores: Score[] };
 
-export type messageRequestBodyType = {};
+export type messageRequestBodyType = { roomId: string; text: string; kind: "text" };
 
-export type messageResponseType = {};
+export type messageResponseType = { error: boolean };
 
-export type messageSocketEmitType = {};
+export type messageSocketEmitType = { roomId: string; message: Message };
 
-export type newDistributionRequestBodyType = {};
+export type newLevelRequestBodyType = { title: string };
 
-export type newDistributionResponseType = {};
+export type newLevelResponseType = { level: Level };
 
-export type saveDistributionRequestBodyType = {};
+export type saveLevelRequestBodyType = { newLevel: Level };
 
-export type saveDistributionResponseType = {};
+export type saveLevelResponseType = { error: boolean };
 
 export type tryCodeRequestBodyType = {};
 

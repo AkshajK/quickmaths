@@ -23,6 +23,7 @@
     "@react-oauth/google": "^0.2.5",
     "connect-ensure-login": "^0.1.1",
     "core-js": "^3.8.1",
+    "crypto-random-string": "^5.0.0",
     "dotenv": "^16.0.1",
     "express": "^4.17.1",
     "express-session": "^1.17.3",

@@ -1,6 +1,9 @@
 import express from "express";
 import auth from "./auth";
 import socketManager from "./server-socket";
+import adminCalls from "./apiCalls/adminCalls";
+import lobbyCalls from "./apiCalls/lobbyCalls";
+import roomCalls from "./apiCalls/roomCalls";
 
 import User from "./models/user";
 import Game from "./models/game";
@@ -33,6 +36,20 @@ router.post("/initsocket", (req, res) => {
 // |------------------------------|
 // | write your API methods below!|
 // |------------------------------|
+
+router.post("/joinLobbyPage", lobbyCalls.joinLobbyPage);
+router.post("/createRoom", lobbyCalls.createRoom);
+
+router.post("/joinRoomPage", roomCalls.joinRoomPage);
+router.post("/startGame", roomCalls.startGame);
+router.post("/guess", roomCalls.guess);
+router.post("/message", roomCalls.message);
+
+router.post("/newLevel", adminCalls.newLevel);
+router.post("/saveLevel", adminCalls.saveLevel);
+router.post("/tryCode", adminCalls.tryCode);
+router.post("/newQuestionType", adminCalls.newQuestionType);
+router.post("/saveQuestionType", adminCalls.saveQuestionType);
 
 // anything else falls to this "not found" case
 router.all("*", (req, res) => {

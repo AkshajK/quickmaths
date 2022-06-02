@@ -8,6 +8,8 @@ const RoomSchema = new Schema({
   users: [String], // userIds
   spectatingUsers: [String], // userIds,
   gameId: [String],
+  host: String,
+  lastActive: Date,
 });
 
 export interface Room extends Document {
@@ -15,10 +17,12 @@ export interface Room extends Document {
   isPrivate: boolean;
   inProgress: boolean;
   levelId: string;
-  users: [string]; // userIds
-  spectatingUsers: [string]; // userIds,
-  gameId: [string];
+  users: string[]; // userIds
+  spectatingUsers: string[]; // userIds,
+  gameId: string[];
   _id: string;
+  host: string;
+  lastActive: Date;
 }
 
 const RoomModel = model<Room>("Room", RoomSchema);

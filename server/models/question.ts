@@ -10,7 +10,7 @@ const QuestionSchema = new Schema({
 export interface Question extends Document {
   gameId: string;
   prompt: string;
-  answer: number;
+  answer?: number;
   questionTypeId: string;
   _id: string;
 }
