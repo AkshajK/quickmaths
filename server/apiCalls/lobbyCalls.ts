@@ -14,9 +14,8 @@ import {
   QuestionType,
   Room,
   Score,
+  generateString,
 } from "../../shared/apiTypes";
-var _ = require("lodash");
-import cryptoRandomString from "crypto-random-string";
 
 import {
   createRoomRequestBodyType,
@@ -34,49 +33,59 @@ const leaderboard: Leaderboard = { topRatings: [], topScores: [] };
 
 const joinLobbyPage = async (
   req: TypedRequestBody<joinLobbyPageRequestBodyType>,
-  res: TypedResponse<joinLobbyPageResponseType>
+  res: TypedResponse<joinLobbyPageResponseType | string>
 ) => {
+  const myUserId: string = req.user?.id as string;
   const levels: Level[] = await LevelModel.find({});
-  const condensedLevels = _.pick(levels, ["_id", "title"]);
+  const condensedLevels = levels.map((level) => ({ _id: level._id, title: level.title }));
 
   const rooms: Room[] = await RoomModel.find({});
   const condensedRooms = await Promise.all(
     rooms.map(async (room) => {
-      const level = await LevelModel.findById(room.levelId);
+      const level: Level | null = await LevelModel.findById(room.levelId);
       return {
         inProgress: room.inProgress,
         host: room.host,
         players: room.users.length,
-        levelName: level.title,
+        levelName: level?.title || "No level",
         lastActive: room.lastActive,
         name: room.name,
       };
     })
   );
 
-  const user = await UserModel.findById(req.user._id);
-
-  res.status(200).json({
-    leaderboard,
-    levels: condensedLevels,
-    rooms: condensedRooms,
-    userInfo: _.pick(user, ["_id", "name", "rating", "highScore"]),
-  });
+  const user = await UserModel.findById(myUserId);
+  if (!user) {
+    res.status(400).json("No user");
+  } else {
+    res.status(200).json({
+      leaderboard,
+      levels: condensedLevels,
+      rooms: condensedRooms,
+      userInfo: {
+        _id: user._id,
+        name: user.name,
+        rating: user.rating,
+        highScore: user.highScore,
+      },
+    });
+  }
 };
 
 const createRoom = async (
   req: TypedRequestBody<createRoomRequestBodyType>,
   res: TypedResponse<createRoomResponseType>
 ) => {
+  const myUserId: string = req.user?.id as string;
   const room = new RoomModel({
-    name: cryptoRandomString({ length: 10, type: "base64" }),
+    name: generateString(10),
     isPrivate: req.body.private,
     inProgress: false,
     levelId: req.body.levelId,
     users: [],
     spectatingUsers: [],
     gameId: [],
-    host: req.user._id,
+    host: myUserId,
     lastActive: new Date(),
   });
   const savedRoom = await room.save();

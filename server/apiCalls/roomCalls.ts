@@ -9,7 +9,7 @@ import {
   Score,
 } from "../../shared/apiTypes";
 
-var _ = require("lodash");
+import * as _ from "lodash";
 
 import {
   TypedRequestBody,
@@ -42,41 +42,48 @@ const joinRoomPage = async (
   req: TypedRequestBody<joinRoomPageRequestBodyType>,
   res: TypedResponse<joinRoomPageResponseType | string>
 ) => {
-  let room: Room = await RoomModel.findOne({ name: req.body.roomName });
+  const myUserId: string = req.user?.id as string;
+  let room: Room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
   lock.acquire(room._id, async () => {
-    room = await RoomModel.findOne({ name: req.body.roomName });
+    room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
 
     if (req.body.spectating) {
-      if (room.spectatingUsers.find((user) => user === req.user._id)) {
+      if (room.spectatingUsers.find((user) => user === myUserId)) {
         console.log("Spectating room that you are already spectating?");
       } else {
-        room.spectatingUsers = room.spectatingUsers.concat(req.user._id);
+        room.spectatingUsers = room.spectatingUsers.concat(myUserId);
       }
     } else {
-      if (room.users.find((user) => user === req.user._id)) {
+      if (room.users.find((user) => user === myUserId)) {
         console.log("Joining room that you are already in?");
       } else {
-        room.users = room.users.concat(req.user._id);
+        room.users = room.users.concat(myUserId);
       }
     }
 
-    socketManager.getSocketFromUserID(req.user._id).join(room._id);
+    socketManager.getSocketFromUserID(myUserId)?.join(room._id) ?? console.log("No socket");
     const gameId = room.gameId.slice(-1)[0];
-    const game: Game | undefined = gameId && (await GameModel.findById(gameId));
-    const level = await LevelModel.findById(room.levelId);
+    const game: Game | undefined =
+      (gameId !== undefined && ((await GameModel.findById(gameId)) as Game)) || undefined;
+    const level = (await LevelModel.findById(room.levelId)) as Level;
     const status = !game ? "waiting" : game.status;
-    const yourScore = game?.scores?.find((score) => score.userId === req.user._id).score;
+    const yourScore = game?.scores?.find((score) => score.userId === myUserId)?.score || 0;
     const questionId =
       status === "inProgress" &&
       yourScore &&
+      game &&
+      game.questions &&
       yourScore < game.questions.length &&
       game.questions[yourScore];
-    const question = questionId && (await QuestionModel.findById(questionId));
-    const data: joinRoomPageSocketEmitType = { roomName: room.name, userId: req.user._id };
-    const roomUsers = (await UserModel.find({ _id: { $in: room.users } })).map((user) =>
-      _.pick(user, ["name", "rating", "_id"])
-    );
-
+    const question =
+      (questionId && ((await QuestionModel.findById(questionId)) as Question)) || undefined;
+    const data: joinRoomPageSocketEmitType = { roomName: room.name, userId: myUserId };
+    const roomUsers = (await UserModel.find({ _id: { $in: room.users } })).map((user) => ({
+      name: user.name,
+      rating: user.rating,
+      _id: user._id,
+    }));
+    _.unset(question, "answer");
     socketManager.getIo().in(room._id).emit("joinRoomPage", data);
     await room.save();
     res.status(200).json({
@@ -86,8 +93,8 @@ const joinRoomPage = async (
       users: roomUsers,
       spectatingUsers: room.spectatingUsers,
       spectating: req.body.spectating || (status === "inProgress" && !question),
-      question: _.unset(question, "answer"),
-      startTime: game && !(game.status === "complete") && game.startTime,
+      question: question,
+      startTime: (game && !(game.status === "complete") && game.startTime) || undefined,
       scores: game?.scores,
     });
   });
@@ -97,9 +104,10 @@ const startGame = (
   req: TypedRequestBody<startGameRequestBodyType>,
   res: TypedResponse<startGameResponseType>
 ) => {
+  const myUserId: string = req.user?.id as string;
   lock.acquire(req.body.roomId, async () => {
-    const room: Room = await RoomModel.findById(req.body.roomId);
-    const roomUsers = await UserModel.find({ _id: { $in: room.users } });
+    const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
+    const roomUsers = (await UserModel.find({ _id: { $in: room.users } })) as User[];
     /** TODO: Replace with actual question generation code */
     var questions = [];
     for (var i = 0; i < 100; i++) {
@@ -125,7 +133,7 @@ const startGame = (
     const timeLimit = 30;
     const game = new GameModel({
       status: "aboutToStart",
-      host: req.user._id,
+      host: myUserId,
       questions: savedQuestions,
       scores,
       startTime,
@@ -152,8 +160,8 @@ const startGame = (
 
 const setGameToStarted = async (roomId: string, gameId: string) => {
   lock.acquire(roomId, async () => {
-    const room: Room = await RoomModel.findById(roomId);
-    const game: Game = await GameModel.findById(gameId);
+    const room: Room = (await RoomModel.findById(roomId)) as Room;
+    const game: Game = (await GameModel.findById(gameId)) as Game;
     room.inProgress = true;
     game.status = "inProgress";
     await room.save();
@@ -164,8 +172,8 @@ const setGameToStarted = async (roomId: string, gameId: string) => {
 
 const setGameToComplete = async (roomId: string, gameId: string) => {
   lock.acquire(roomId, async () => {
-    const room: Room = await RoomModel.findById(roomId);
-    const game: Game = await GameModel.findById(gameId);
+    const room: Room = (await RoomModel.findById(roomId)) as Room;
+    const game: Game = (await GameModel.findById(gameId)) as Game;
     room.inProgress = false;
     game.status = "complete";
     await room.save();
@@ -178,17 +186,21 @@ const guess = (
   req: TypedRequestBody<guessRequestBodyType>,
   res: TypedResponse<guessResponseType>
 ) => {
+  const myUserId: string = req.user?.id as string;
   lock.acquire(req.body.roomId, async () => {
-    const room: Room = await RoomModel.findById(req.body.roomId);
-    const game: Game = await GameModel.findById(room.gameId.slice(-1)[0]);
-    const index = game.scores.findIndex((score) => score.userId === req.user._id);
-    const question: Question = await QuestionModel.findById(
+    const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
+    const game: Game = (await GameModel.findById(room.gameId.slice(-1)[0])) as Game;
+    const index = game.scores.findIndex((score) => score.userId === myUserId);
+    const question: Question = (await QuestionModel.findById(
       game.questions[game.scores[index].questionNumber]
-    );
+    )) as Question;
     const correct = question.answer === req.body.answer;
     const nextQuestion: Question | undefined =
-      correct &&
-      (await QuestionModel.findById(game.questions[game.scores[index].questionNumber + 1]));
+      (correct &&
+        ((await QuestionModel.findById(
+          game.questions[game.scores[index].questionNumber + 1]
+        )) as Question)) ||
+      undefined;
     game.scores[index]["questionNumber"] += correct ? 1 : 0;
     game.scores[index]["score"] += correct ? 1 : 0;
     game.markModified("scores");
@@ -196,7 +208,7 @@ const guess = (
     const data: guessSocketEmitType = { roomId: room._id, scores: savedGame.scores };
     socketManager.getIo().in(room._id).emit("guess", data);
     res.status(200).json({
-      question: correct && nextQuestion,
+      question: (correct && nextQuestion) || undefined,
       correct,
     });
   });
@@ -206,12 +218,13 @@ const message = async (
   req: TypedRequestBody<messageRequestBodyType>,
   res: TypedResponse<messageResponseType>
 ) => {
-  const user = await UserModel.findById(req.user._id);
+  const myUserId: string = req.user?.id as string;
+  const user = (await UserModel.findById(myUserId)) as User;
   const newMessage = new MessageModel({
     roomId: req.body.roomId,
     text: req.body.text,
     kind: req.body.kind,
-    userId: req.user._id,
+    userId: myUserId,
     userName: user.name,
   });
   const newMessageSaved = await newMessage.save();

@@ -15,6 +15,17 @@ export { User, Room, Game, Score, Message, Question, Level, QuestionType };
 
 export const lock = new AsyncLock();
 
+const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+export function generateString(length: number) {
+  let result = "";
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+
+  return result;
+}
+
 export interface TypedRequestBody<T> extends Express.Request {
   body: T;
 }
@@ -62,7 +73,7 @@ export type joinRoomPageRequestBodyType = { roomName: string; spectating?: boole
 export type joinRoomPageResponseType = {
   status: "waiting" | "aboutToStart" | "inProgress" | "complete";
   levelName: string;
-  users: { name: string; rating: string; _id: string }[];
+  users: { name: string; rating: number; _id: string }[];
   spectatingUsers: string[];
   spectating: boolean;
   roomId: string;
