@@ -1,6 +1,5 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
-import "./Skeleton.css";
 import { RouteComponentProps } from "@reach/router";
 //TODO(weblab student): REPLACE WITH YOUR OWN CLIENT_ID
 const GOOGLE_CLIENT_ID = "180080882825-to464u7earqlme8o2muc5e0bqll8llih.apps.googleusercontent.com";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Router } from "@reach/router";
 import NotFound from "./pages/NotFound";
 import Skeleton from "./pages/Skeleton";

@@ -1,10 +1,14 @@
-import User from "../../shared/user";
-import Game from "../../shared/game";
-import Level from "../../shared/level";
-import Message from "../../shared/message";
-import Question from "../../shared/question";
-import QuestionType from "../../shared/questiontype";
-import Room from "../../shared/room";
+import {
+  User,
+  Game,
+  Level,
+  Message,
+  Question,
+  QuestionType,
+  Room,
+  Score,
+} from "../../shared/apiTypes";
+
 import {
   TypedRequestBody,
   TypedResponse,

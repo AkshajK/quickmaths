@@ -5,13 +5,16 @@ import MessageModel from "../models/message";
 import QuestionModel from "../models/question";
 import QuestionTypeModel from "../models/questiontype";
 import RoomModel from "../models/room";
-import User from "../../shared/user";
-import Game from "../../shared/game";
-import Level from "../../shared/level";
-import Message from "../../shared/message";
-import Question from "../../shared/question";
-import QuestionType from "../../shared/questiontype";
-import Room from "../../shared/room";
+import {
+  User,
+  Game,
+  Level,
+  Message,
+  Question,
+  QuestionType,
+  Room,
+  Score,
+} from "../../shared/apiTypes";
 var _ = require("lodash");
 import cryptoRandomString from "crypto-random-string";
 

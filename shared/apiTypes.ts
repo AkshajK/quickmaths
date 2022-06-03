@@ -1,12 +1,17 @@
 import Express from "express";
 import { Query, Send } from "express-serve-static-core";
-import Room from "./Room";
-import Game from "./Game";
-import Score from "./Score";
-import Message from "./Message";
-import Question from "./Question";
-import Level from "./Level";
+
 var AsyncLock = require("async-lock");
+
+import { User } from "../server/models/user";
+import { Room } from "../server/models/room";
+import { Game, Score } from "../server/models/game";
+import { Message } from "../server/models/message";
+import { Question } from "../server/models/question";
+import { Level } from "../server/models/level";
+import { QuestionType } from "../server/models/questiontype";
+
+export { User, Room, Game, Score, Message, Question, Level, QuestionType };
 
 export const lock = new AsyncLock();
 

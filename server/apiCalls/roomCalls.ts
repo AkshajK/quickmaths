@@ -1,10 +1,13 @@
-import User from "../../shared/user";
-import Game from "../../shared/game";
-import Level from "../../shared/level";
-import Message from "../../shared/message";
-import Question from "../../shared/question";
-import QuestionType from "../../shared/questiontype";
-import Room from "../../shared/room";
+import {
+  User,
+  Game,
+  Level,
+  Message,
+  Question,
+  QuestionType,
+  Room,
+  Score,
+} from "../../shared/apiTypes";
 
 var _ = require("lodash");
 
@@ -32,7 +35,6 @@ import LevelModel from "../models/level";
 import QuestionModel from "../models/question";
 import MessageModel from "../models/message";
 import socketManager from "../server-socket";
-import e from "express";
 
 const fromNow = (seconds: number): Date => new Date(new Date().getTime() + seconds * 1000);
 

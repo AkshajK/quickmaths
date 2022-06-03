@@ -1,7 +1,7 @@
 import { OAuth2Client, TokenPayload } from "google-auth-library";
 import { NextFunction, Request, Response } from "express";
-import User from "./models/User";
-import UserInterface from "../shared/User";
+import UserModel from "./models/User";
+import { User } from "../shared/apiTypes";
 
 // create a new OAuth client used to verify google sign-in
 //    TODO: replace with your own CLIENT_ID
@@ -18,16 +18,14 @@ const verify = (token: string) => {
 };
 
 const getOrCreateUser = (user: TokenPayload) => {
-  return User.findOne({ googleid: user.sub }).then(
-    (existingUser: UserInterface | null | undefined) => {
-      if (existingUser !== null && existingUser !== undefined) return existingUser;
-      const newUser = new User({
-        name: user.name,
-        googleid: user.sub,
-      });
-      return newUser.save();
-    }
-  );
+  return UserModel.findOne({ googleid: user.sub }).then((existingUser: User | null | undefined) => {
+    if (existingUser !== null && existingUser !== undefined) return existingUser;
+    const newUser = new UserModel({
+      name: user.name,
+      googleid: user.sub,
+    });
+    return newUser.save();
+  });
 };
 
 const login = (req: Request, res: Response) => {
