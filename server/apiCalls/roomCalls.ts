@@ -42,7 +42,7 @@ const joinRoomPage = async (
   req: TypedRequestBody<joinRoomPageRequestBodyType>,
   res: TypedResponse<joinRoomPageResponseType | string>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   let room: Room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
   lock.acquire(room._id, async () => {
     room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
@@ -80,7 +80,7 @@ const joinRoomPage = async (
     const data: joinRoomPageSocketEmitType = { roomName: room.name, userId: myUserId };
     const roomUsers = (await UserModel.find({ _id: { $in: room.users } })).map((user) => ({
       name: user.name,
-      rating: user.rating,
+      rating: user.data.find((entry) => entry.levelId === level._id)?.rating || 1200,
       _id: user._id,
     }));
     _.unset(question, "answer");
@@ -104,7 +104,7 @@ const startGame = (
   req: TypedRequestBody<startGameRequestBodyType>,
   res: TypedResponse<startGameResponseType>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   lock.acquire(req.body.roomId, async () => {
     const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
     const roomUsers = (await UserModel.find({ _id: { $in: room.users } })) as User[];
@@ -186,7 +186,7 @@ const guess = (
   req: TypedRequestBody<guessRequestBodyType>,
   res: TypedResponse<guessResponseType>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   lock.acquire(req.body.roomId, async () => {
     const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
     const game: Game = (await GameModel.findById(room.gameId.slice(-1)[0])) as Game;
@@ -218,7 +218,7 @@ const message = async (
   req: TypedRequestBody<messageRequestBodyType>,
   res: TypedResponse<messageResponseType>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   const user = (await UserModel.findById(myUserId)) as User;
   const newMessage = new MessageModel({
     roomId: req.body.roomId,

@@ -35,7 +35,7 @@ const joinLobbyPage = async (
   req: TypedRequestBody<joinLobbyPageRequestBodyType>,
   res: TypedResponse<joinLobbyPageResponseType | string>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   const levels: Level[] = await LevelModel.find({});
   const condensedLevels = levels.map((level) => ({ _id: level._id, title: level.title }));
 
@@ -54,29 +54,29 @@ const joinLobbyPage = async (
     })
   );
 
-  const user = await UserModel.findById(myUserId);
-  if (!user) {
-    res.status(400).json("No user");
-  } else {
-    res.status(200).json({
-      leaderboard,
-      levels: condensedLevels,
-      rooms: condensedRooms,
-      userInfo: {
-        _id: user._id,
-        name: user.name,
-        rating: user.rating,
-        highScore: user.highScore,
-      },
-    });
-  }
+  const user = (await UserModel.findById(myUserId)) as User;
+  const entry: { rating: number; highScore: number; levelId: string } = user.data.find(
+    (dataEntry) => dataEntry.levelId === req.body.levelId
+  );
+
+  res.status(200).json({
+    leaderboard,
+    levels: condensedLevels,
+    rooms: condensedRooms,
+    userInfo: {
+      _id: user._id,
+      name: user.name,
+      rating: entry?.rating || 1200,
+      highScore: entry?.highScore || 0,
+    },
+  });
 };
 
 const createRoom = async (
   req: TypedRequestBody<createRoomRequestBodyType>,
   res: TypedResponse<createRoomResponseType>
 ) => {
-  const myUserId: string = req.user?.id as string;
+  const myUserId: string = req.user?._id as string;
   const room = new RoomModel({
     name: generateString(10),
     isPrivate: req.body.private,

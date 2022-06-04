@@ -28,9 +28,11 @@ export function generateString(length: number) {
 
 export interface TypedRequestBody<T> extends Express.Request {
   body: T;
+  user: { _id: string };
 }
 export interface TypedRequestQuery<T extends Query> extends Express.Request {
   query: T;
+  user: { _id: string };
 }
 export interface TypedResponse<ResBody> extends Express.Response {
   json: Send<ResBody, this>;
@@ -43,17 +45,19 @@ export type Leaderboard = {
 
 export type joinLobbyPageRequestBodyType = { levelId: string };
 
+export type LobbyRooms = {
+  inProgress: boolean;
+  host: string;
+  players: number;
+  levelName: string;
+  lastActive: Date;
+  name: string;
+};
+
 export type joinLobbyPageResponseType = {
   leaderboard: Leaderboard;
   levels: { _id: string; title: string }[];
-  rooms: {
-    inProgress: boolean;
-    host: string;
-    players: number;
-    levelName: string;
-    lastActive: Date;
-    name: string;
-  }[]; // only waiting and inProgress rooms
+  rooms: LobbyRooms[]; // only waiting and inProgress rooms
   userInfo: {
     _id: string;
     name: string;
