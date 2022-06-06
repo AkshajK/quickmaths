@@ -27,6 +27,7 @@ import {
   messageSocketEmitType,
   startGameSocketEmitType,
   guessSocketEmitType,
+  getLobbyRoom,
 } from "../../shared/apiTypes";
 import UserModel from "../models/user";
 import RoomModel from "../models/room";
@@ -61,7 +62,7 @@ const joinRoomPage = async (
       }
     }
 
-    socketManager.getSocketFromUserID(myUserId)?.join(room._id) ?? console.log("No socket");
+    socketManager.getSocketFromUserID(myUserId)?.join(room._id) ?? console.log("Error: No socket");
     const gameId = room.gameId.slice(-1)[0];
     const game: Game | undefined =
       (gameId !== undefined && ((await GameModel.findById(gameId)) as Game)) || undefined;
@@ -77,7 +78,10 @@ const joinRoomPage = async (
       game.questions[yourScore];
     const question =
       (questionId && ((await QuestionModel.findById(questionId)) as Question)) || undefined;
-    const data: joinRoomPageSocketEmitType = { roomName: room.name, userId: myUserId };
+    const data: joinRoomPageSocketEmitType = {
+      roomName: room.name,
+      userId: myUserId,
+    };
     const roomUsers = (await UserModel.find({ _id: { $in: room.users } })).map((user) => ({
       name: user.name,
       rating: user.data.find((entry) => entry.levelId === level._id)?.rating || 1200,
@@ -85,6 +89,8 @@ const joinRoomPage = async (
     }));
     _.unset(question, "answer");
     socketManager.getIo().in(room._id).emit("joinRoomPage", data);
+    const updatedRoom = await getLobbyRoom(room, level.title);
+    socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
     await room.save();
     res.status(200).json({
       status,
@@ -107,6 +113,7 @@ const startGame = (
   const myUserId: string = req.user?._id as string;
   lock.acquire(req.body.roomId, async () => {
     const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
+    const level: Level = (await LevelModel.findById(room.levelId)) as Level;
     const roomUsers = (await UserModel.find({ _id: { $in: room.users } })) as User[];
     /** TODO: Replace with actual question generation code */
     var questions = [];
@@ -147,6 +154,8 @@ const startGame = (
     await room.save();
     const data: startGameSocketEmitType = { startTime, scores };
     socketManager.getIo().in(room._id).emit("aboutToStart", data);
+    const updatedRoom = await getLobbyRoom(room, level.title);
+    socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
     setTimeout(
       () => setGameToStarted(room._id, game._id),
       startTime.getTime() - new Date().getTime()
@@ -166,6 +175,8 @@ const setGameToStarted = async (roomId: string, gameId: string) => {
     game.status = "inProgress";
     await room.save();
     await game.save();
+    const updatedRoom = await getLobbyRoom(room);
+    socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
     socketManager.getIo().in(roomId).emit("inProgress", { question: game.questions[0] });
   });
 };
@@ -178,6 +189,8 @@ const setGameToComplete = async (roomId: string, gameId: string) => {
     game.status = "complete";
     await room.save();
     await game.save();
+    const updatedRoom = await getLobbyRoom(room);
+    socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
     socketManager.getIo().in(roomId).emit("complete", {});
   });
 };

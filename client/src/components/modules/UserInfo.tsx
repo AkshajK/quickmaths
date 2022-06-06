@@ -33,7 +33,7 @@ const UserInfo = (props: UserInfoProps) => {
         <Typography variant="h5" component="div" gutterBottom>
           {props.name}
         </Typography>
-        <Grid direction="column" width="100%">
+        <Grid container direction="column" width="100%">
           <Box width="50%">
             <Typography sx={{ mb: 1.5 }} color="text.secondary">
               Rating

@@ -15,6 +15,7 @@ import {
   Room,
   Score,
   generateString,
+  LobbyRoom,
 } from "../../shared/apiTypes";
 
 import {
@@ -27,7 +28,9 @@ import {
   TypedResponse,
   lock,
   Leaderboard,
+  getLobbyRoom,
 } from "../../shared/apiTypes";
+import socketManager from "../server-socket";
 
 const leaderboard: Leaderboard = { topRatings: [], topScores: [] };
 
@@ -36,32 +39,21 @@ const joinLobbyPage = async (
   res: TypedResponse<joinLobbyPageResponseType | string>
 ) => {
   const myUserId: string = req.user?._id as string;
+  socketManager.getSocketFromUserID(myUserId)?.join("Lobby") ?? console.log("Error: No socket");
   const levels: Level[] = await LevelModel.find({});
   const condensedLevels = levels.map((level) => ({ _id: level._id, title: level.title }));
 
   const rooms: Room[] = await RoomModel.find({});
-  const condensedRooms = await Promise.all(
-    rooms.map(async (room) => {
-      const level: Level | null = await LevelModel.findById(room.levelId);
-      return {
-        inProgress: room.inProgress,
-        host: room.host,
-        players: room.users.length,
-        levelName: level?.title || "No level",
-        lastActive: room.lastActive,
-        name: room.name,
-      };
-    })
-  );
+  const condensedRooms: LobbyRoom[] = await Promise.all(rooms.map((room) => getLobbyRoom(room)));
 
   const user = (await UserModel.findById(myUserId)) as User;
-  const entry: { rating: number; highScore: number; levelId: string } = user.data.find(
-    (dataEntry) => dataEntry.levelId === req.body.levelId
+  const entry: { rating: number; highScore: number; levelId: string } | undefined = user.data.find(
+    (dataEntry) => (req.body.levelId ? dataEntry.levelId === req.body.levelId : true)
   );
-
   res.status(200).json({
     leaderboard,
     levels: condensedLevels,
+    levelId: entry?.levelId || levels[0]._id,
     rooms: condensedRooms,
     userInfo: {
       _id: user._id,
@@ -89,6 +81,8 @@ const createRoom = async (
     lastActive: new Date(),
   });
   const savedRoom = await room.save();
+  const savedLobbyRoom = await getLobbyRoom(savedRoom);
+  socketManager.getIo().in("Lobby").emit("newRoom", savedLobbyRoom);
   res.status(200).json({ room: savedRoom });
 };
 

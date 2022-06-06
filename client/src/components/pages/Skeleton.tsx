@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { RouteComponentProps } from "@reach/router";
 //TODO(weblab student): REPLACE WITH YOUR OWN CLIENT_ID

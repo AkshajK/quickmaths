@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Router } from "@reach/router";
 import NotFound from "./pages/NotFound";
 import Skeleton from "./pages/Skeleton";
-
+import LobbyPage from "./pages/LobbyPage";
 import "../utilities.css";
 
 import { socket } from "../client-socket";
@@ -25,11 +25,9 @@ const App = () => {
   }, []);
 
   const handleLogin = (res) => {
-    console.log(res);
     const userToken = res.credential;
     post("/api/login", { token: userToken }).then((user) => {
-      setUserId(user._id);
-      post("/api/initsocket", { socketid: socket.id });
+      window.location.reload();
     });
   };
 
@@ -37,11 +35,16 @@ const App = () => {
     setUserId(undefined);
     post("/api/logout");
   };
-
   return (
     <>
       <Router>
-        <Skeleton path="/" handleLogin={handleLogin} handleLogout={handleLogout} userId={userId} />
+        <LobbyPage path="/" handleLogin={handleLogin} handleLogout={handleLogout} userId={userId} />
+        <Skeleton
+          path="/login"
+          handleLogin={handleLogin}
+          handleLogout={handleLogout}
+          userId={userId}
+        />
         <NotFound default />
       </Router>
     </>

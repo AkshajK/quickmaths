@@ -8,7 +8,7 @@ import { Room } from "../server/models/room";
 import { Game, Score } from "../server/models/game";
 import { Message } from "../server/models/message";
 import { Question } from "../server/models/question";
-import { Level } from "../server/models/level";
+import LevelModel, { Level } from "../server/models/level";
 import { QuestionType } from "../server/models/questiontype";
 
 export { User, Room, Game, Score, Message, Question, Level, QuestionType };
@@ -26,13 +26,26 @@ export function generateString(length: number) {
   return result;
 }
 
+export const getLobbyRoom = async (room: Room, levelName?: string): Promise<LobbyRoom> => {
+  const levelNameDB: string =
+    levelName || ((await LevelModel.findById(room.levelId)) as Level).title;
+  return {
+    inProgress: room.inProgress,
+    host: room.host,
+    players: room.users.length,
+    levelName: levelNameDB,
+    lastActive: room.lastActive,
+    name: room.name,
+  };
+};
+
 export interface TypedRequestBody<T> extends Express.Request {
   body: T;
-  user: { _id: string };
+  user?: User;
 }
 export interface TypedRequestQuery<T extends Query> extends Express.Request {
   query: T;
-  user: { _id: string };
+  user?: User;
 }
 export interface TypedResponse<ResBody> extends Express.Response {
   json: Send<ResBody, this>;
@@ -43,9 +56,9 @@ export type Leaderboard = {
   topScores: { userId: string; userName: string; score: number }[]; // top 100 scores
 };
 
-export type joinLobbyPageRequestBodyType = { levelId: string };
+export type joinLobbyPageRequestBodyType = { levelId?: string };
 
-export type LobbyRooms = {
+export type LobbyRoom = {
   inProgress: boolean;
   host: string;
   players: number;
@@ -54,10 +67,13 @@ export type LobbyRooms = {
   name: string;
 };
 
+export type LobbyLevel = { _id: string; title: string };
+
 export type joinLobbyPageResponseType = {
   leaderboard: Leaderboard;
-  levels: { _id: string; title: string }[];
-  rooms: LobbyRooms[]; // only waiting and inProgress rooms
+  levels: LobbyLevel[];
+  levelId: string;
+  rooms: LobbyRoom[]; // only waiting and inProgress rooms
   userInfo: {
     _id: string;
     name: string;
@@ -89,7 +105,10 @@ export type joinRoomPageResponseType = {
   scores?: Score[];
 };
 
-export type joinRoomPageSocketEmitType = { roomName: string; userId: string };
+export type joinRoomPageSocketEmitType = {
+  roomName: string;
+  userId: string;
+};
 
 export type startGameRequestBodyType = { roomId: string };
 
