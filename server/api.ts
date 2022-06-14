@@ -16,6 +16,7 @@ import Room from "./models/room";
 const router = express.Router();
 
 router.post("/login", auth.login);
+router.post("/googlelogin", auth.googleLogin);
 router.post("/logout", auth.logout);
 router.get("/whoami", (req: any, res) => {
   if (!req.user) {
@@ -28,7 +29,6 @@ router.post("/initsocket", (req: any, res) => {
   // do nothing if user not logged in
   if (req.user) {
     const socket = socketManager.getSocketFromSocketID(req.body.socketid);
-    console.log(`Socket: ${socket}`);
     if (socket !== undefined) socketManager.addUser(req.user, socket);
   } else {
     console.log("Not logged in");

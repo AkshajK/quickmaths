@@ -9,6 +9,7 @@ import {
   QuestionType,
   Room,
   Score,
+  RoomUser,
   Leaderboard,
   LobbyLevel,
 } from "../../../../shared/apiTypes";
@@ -23,10 +24,12 @@ import ListItem from "@mui/material/ListItem";
 import { ListItemText } from "@mui/material";
 
 type ScoresProps = {
-  scores: Score[];
+  scores?: Score[];
+  users?: RoomUser[];
+  userId: string;
 };
 
-const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
+const BorderLinearProgress = styled(LinearProgress)<{ special: boolean }>(({ theme, special }) => ({
   height: 10,
   borderRadius: 5,
   [`&.${linearProgressClasses.colorPrimary}`]: {
@@ -34,35 +37,59 @@ const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
   },
   [`& .${linearProgressClasses.bar}`]: {
     borderRadius: 5,
-    backgroundColor: theme.palette.mode === "light" ? "#1a90ff" : "#308fe8",
+    backgroundColor: special ? "#FF32DE" : theme.palette.mode === "light" ? "#1a90ff" : "#308fe8",
   },
 }));
-
+const getListItem = (isCurrentUser: boolean, name: string, score: number, max: number) => (
+  <ListItem key={name}>
+    <Grid container direction="row" justifyContent="center" alignItems="center">
+      <Box width="150px">
+        <ListItemText
+          primary={name}
+          primaryTypographyProps={{
+            color: isCurrentUser ? "#FF32DE" : "#306AFF",
+            fontWeight: isCurrentUser ? "bold" : undefined,
+          }}
+          secondary={score > 0 && score}
+        />
+      </Box>
+      <Box width="calc(100% - 150px)">
+        <BorderLinearProgress
+          special={isCurrentUser}
+          color={score === max ? "primary" : "primary"}
+          variant="determinate"
+          value={(100.0 * score) / Math.max(10, max)}
+        />
+      </Box>
+    </Grid>
+  </ListItem>
+);
 const Scores = (props: ScoresProps) => {
   const [max, setMax] = React.useState(1);
   useEffect(() => {
-    var largest = 1;
-    for (var i = 0; i < props.scores.length; i++) {
-      if (props.scores[i].score > largest) {
-        largest = props.scores[i].score;
+    if (props.scores) {
+      var largest = 1;
+      for (var i = 0; i < props.scores.length; i++) {
+        if (props.scores[i].score > largest) {
+          largest = props.scores[i].score;
+        }
       }
+      setMax(largest);
     }
-    setMax(largest);
   }, [props.scores]);
+  var listItems: JSX.Element[] = [];
+  if (props.scores) {
+    listItems = props.scores.map((entry) =>
+      getListItem(entry.userId === props.userId, entry.name, entry.score, max)
+    );
+  } else {
+    listItems = props.users.map((entry) =>
+      getListItem(entry._id === props.userId, entry.name, 0, 1)
+    );
+  }
   return (
     <Grid container direction="column">
-      <List>
-        {props.scores.map((entry) => (
-          <ListItem>
-            <ListItemText primary={entry.name} secondary={entry.score} />
-            <BorderLinearProgress
-              color={entry.score === max ? "secondary" : "primary"}
-              variant="determinate"
-              value={(100.0 * entry.score) / max}
-            />
-          </ListItem>
-        ))}
-      </List>
+      <List>{listItems}</List>
     </Grid>
   );
 };

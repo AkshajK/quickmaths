@@ -1,5 +1,6 @@
 import Express from "express";
 import { Query, Send } from "express-serve-static-core";
+import { Server } from "socket.io";
 
 var AsyncLock = require("async-lock");
 
@@ -39,6 +40,19 @@ export const getLobbyRoom = async (room: Room, levelName?: string): Promise<Lobb
   };
 };
 
+export const removeUserFromRoom = async (room: Room, userId: string, io: Server) => {
+  room.spectatingUsers = room.spectatingUsers.filter((userid) => userid !== userId + "");
+  room.users = room.users.filter((userid) => userid !== userId + "");
+  const data: leaveRoomPageSocketEmitType = {
+    roomName: room.name,
+    userId: userId + "",
+  };
+  const updatedRoom = await getLobbyRoom(room);
+  io.in("" + room._id).emit("leaveRoomPage", data);
+  io.in("Lobby").emit("updateRoom", updatedRoom);
+  await room.save();
+};
+
 export interface TypedRequestBody<T> extends Express.Request {
   body: T;
   user?: User;
@@ -67,6 +81,8 @@ export type LobbyRoom = {
   name: string;
 };
 
+export type RoomUser = { name: string; rating: number; _id: string };
+
 export type LobbyLevel = { _id: string; title: string };
 
 export type joinLobbyPageResponseType = {
@@ -93,8 +109,8 @@ export type joinRoomPageRequestBodyType = { roomName: string; spectating?: boole
 export type joinRoomPageResponseType = {
   status: "waiting" | "aboutToStart" | "inProgress" | "complete";
   levelName: string;
-  users: { name: string; rating: number; _id: string }[];
-  spectatingUsers: string[];
+  users: RoomUser[];
+  spectatingUsers: RoomUser[];
   spectating: boolean;
   roomId: string;
   // in Progress
@@ -107,6 +123,12 @@ export type joinRoomPageResponseType = {
 
 export type joinRoomPageSocketEmitType = {
   roomName: string;
+  user: RoomUser;
+  spectating?: boolean;
+};
+
+export type leaveRoomPageSocketEmitType = {
+  roomName: string;
   userId: string;
 };
 
@@ -116,7 +138,7 @@ export type startGameResponseType = { error: boolean };
 
 export type startGameSocketEmitType = { startTime: Date; scores: Score[] };
 
-export type guessRequestBodyType = { roomId: string; answer: number };
+export type guessRequestBodyType = { roomId: string; answer: string };
 
 export type guessResponseType = { correct: boolean; question?: Question };
 

@@ -21,26 +21,23 @@ import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import LobbyLeaderboard from "./LobbyLeaderboard";
-
+import UserInfo from "./UserInfo";
 type LobbySideBarProps = {
   levelId: string;
   levels: LobbyLevel[];
   setLevelId: (levelId: string) => void;
   leaderboard: Leaderboard;
+  userInfo?: { _id: string; name: string; rating: number; highScore: number };
 };
 
 const LobbySideBar = (props: LobbySideBarProps) => {
   const { levelId, levels, setLevelId, leaderboard } = props;
   return (
     <Grid container direction="column">
-      <Typography
-        variant="h4"
-        align="center"
-        color="#306AFF"
-        sx={{ fontWeight: "bold", marginRight: "6px" }}
-      >
+      <Typography variant="h4" align="center" color="#306AFF" fontWeight="bold" marginBottom="10px">
         QuickMaths
       </Typography>
+
       <Box>
         <FormControl fullWidth>
           <InputLabel id="demo-simple-select-label">Level</InputLabel>
@@ -61,6 +58,13 @@ const LobbySideBar = (props: LobbySideBarProps) => {
           </Select>
         </FormControl>
       </Box>
+      {props.userInfo && (
+        <UserInfo
+          name={props.userInfo.name}
+          rating={props.userInfo.rating}
+          highScore={props.userInfo.highScore}
+        />
+      )}
       <LobbyLeaderboard leaderboard={leaderboard} />
     </Grid>
   );

@@ -1,6 +1,15 @@
 import type http from "http";
 import { Server, Socket } from "socket.io";
-import { User } from "../shared/apiTypes";
+import {
+  User,
+  Room,
+  lock,
+  leaveRoomPageSocketEmitType,
+  getLobbyRoom,
+  removeUserFromRoom,
+} from "../shared/apiTypes";
+import UserModel from "./models/user";
+import RoomModel from "./models/room";
 let io: Server;
 
 const userToSocketMap: Map<string, Socket> = new Map<string, Socket>(); // maps user ID to socket object
@@ -31,10 +40,20 @@ export const init = (server: http.Server): void => {
   io = new Server(server);
   io.on("connection", (socket) => {
     console.log(`socket has connected ${socket.id}`);
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`socket has disconnected ${socket.id}`);
+
       const user = getUserFromSocketID(socket.id);
-      if (user !== undefined) removeUser(user, socket);
+      if (user !== undefined) {
+        const savedUser = (await UserModel.findById(user._id)) as User;
+        lock.acquire(savedUser.roomId, async () => {
+          removeUser(savedUser, socket);
+          if (savedUser.roomId !== "Lobby") {
+            const room: Room = (await RoomModel.findById(savedUser.roomId)) as Room;
+            await removeUserFromRoom(room, savedUser._id, io);
+          }
+        });
+      }
     });
   });
 };

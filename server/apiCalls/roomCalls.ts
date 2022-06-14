@@ -7,6 +7,7 @@ import {
   QuestionType,
   Room,
   Score,
+  RoomUser,
 } from "../../shared/apiTypes";
 
 import * as _ from "lodash";
@@ -28,6 +29,7 @@ import {
   startGameSocketEmitType,
   guessSocketEmitType,
   getLobbyRoom,
+  removeUserFromRoom,
 } from "../../shared/apiTypes";
 import UserModel from "../models/user";
 import RoomModel from "../models/room";
@@ -38,16 +40,26 @@ import MessageModel from "../models/message";
 import socketManager from "../server-socket";
 
 const fromNow = (seconds: number): Date => new Date(new Date().getTime() + seconds * 1000);
+const fromTime = (date: Date, seconds: number): Date =>
+  new Date(new Date(date).getTime() + seconds * 1000);
 
 const joinRoomPage = async (
   req: TypedRequestBody<joinRoomPageRequestBodyType>,
   res: TypedResponse<joinRoomPageResponseType | string>
 ) => {
   const myUserId: string = req.user?._id as string;
+  console.log(`My user id: ${myUserId}`);
   let room: Room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
   lock.acquire(room._id, async () => {
     room = (await RoomModel.findOne({ name: req.body.roomName })) as Room;
-
+    const user = (await UserModel.findById(myUserId)) as User;
+    if (user.roomId !== "Lobby") {
+      // Remove user from the old room
+      const oldRoom: Room = (await RoomModel.findById(user.roomId)) as Room;
+      await removeUserFromRoom(oldRoom, user._id, socketManager.getIo());
+    }
+    user.roomId = room._id;
+    await user.save();
     if (req.body.spectating) {
       if (room.spectatingUsers.find((user) => user === myUserId)) {
         console.log("Spectating room that you are already spectating?");
@@ -61,8 +73,7 @@ const joinRoomPage = async (
         room.users = room.users.concat(myUserId);
       }
     }
-
-    socketManager.getSocketFromUserID(myUserId)?.join(room._id) ?? console.log("Error: No socket");
+    socketManager.getSocketFromUserID(myUserId)?.join("" + room._id);
     const gameId = room.gameId.slice(-1)[0];
     const game: Game | undefined =
       (gameId !== undefined && ((await GameModel.findById(gameId)) as Game)) || undefined;
@@ -80,15 +91,32 @@ const joinRoomPage = async (
       (questionId && ((await QuestionModel.findById(questionId)) as Question)) || undefined;
     const data: joinRoomPageSocketEmitType = {
       roomName: room.name,
-      userId: myUserId,
+      user: {
+        name: user.name,
+        _id: user._id,
+        rating: user.data.find((entry) => entry.levelId === level._id)?.rating || 1200,
+      },
+      spectating: req.body.spectating,
     };
-    const roomUsers = (await UserModel.find({ _id: { $in: room.users } })).map((user) => ({
+    const roomUsers: RoomUser[] = (await UserModel.find({ _id: { $in: room.users } })).map(
+      (user) => ({
+        name: user.name,
+        rating: user.data.find((entry) => entry.levelId === level._id)?.rating || 1200,
+        _id: user._id,
+      })
+    );
+    const roomSpectatingUsers: RoomUser[] = (
+      await UserModel.find({ _id: { $in: room.spectatingUsers } })
+    ).map((user) => ({
       name: user.name,
       rating: user.data.find((entry) => entry.levelId === level._id)?.rating || 1200,
       _id: user._id,
     }));
     _.unset(question, "answer");
-    socketManager.getIo().in(room._id).emit("joinRoomPage", data);
+    socketManager
+      .getIo()
+      .in("" + room._id)
+      .emit("joinRoomPage", data);
     const updatedRoom = await getLobbyRoom(room, level.title);
     socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
     await room.save();
@@ -97,7 +125,7 @@ const joinRoomPage = async (
       roomId: room._id,
       levelName: level.title,
       users: roomUsers,
-      spectatingUsers: room.spectatingUsers,
+      spectatingUsers: roomSpectatingUsers,
       spectating: req.body.spectating || (status === "inProgress" && !question),
       question: question,
       startTime: (game && !(game.status === "complete") && game.startTime) || undefined,
@@ -105,7 +133,7 @@ const joinRoomPage = async (
     });
   });
 };
-
+const timeLimit = 30;
 const startGame = (
   req: TypedRequestBody<startGameRequestBodyType>,
   res: TypedResponse<startGameResponseType>
@@ -121,9 +149,9 @@ const startGame = (
       const a = Math.floor(Math.random() * 100);
       const b = Math.floor(Math.random() * 100);
       const question = new QuestionModel({
-        number: i - 1,
+        number: i,
         prompt: `What is ${a} + ${b}?`,
-        answer: a + b,
+        answer: "" + (a + b),
         questionTypeId: "",
       });
       questions.push(question.save());
@@ -137,11 +165,11 @@ const startGame = (
       questionNumber: 0,
       score: 0,
     }));
-    const timeLimit = 30;
+
     const game = new GameModel({
       status: "aboutToStart",
       host: myUserId,
-      questions: savedQuestions,
+      questions: savedQuestions.map((q) => q._id),
       scores,
       startTime,
       timeLimit,
@@ -153,17 +181,19 @@ const startGame = (
     room.lastActive = new Date();
     await room.save();
     const data: startGameSocketEmitType = { startTime, scores };
-    socketManager.getIo().in(room._id).emit("aboutToStart", data);
+    socketManager
+      .getIo()
+      .in("" + room._id)
+      .emit("aboutToStart", data);
     const updatedRoom = await getLobbyRoom(room, level.title);
     socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
-    setTimeout(
-      () => setGameToStarted(room._id, game._id),
-      startTime.getTime() - new Date().getTime()
-    );
-    setTimeout(
-      () => setGameToComplete(room._id, game._id),
-      startTime.getTime() + timeLimit * 1000 - new Date().getTime()
-    );
+    setTimeout(() => {
+      setGameToStarted(room._id, game._id);
+    }, new Date(startTime).getTime() - new Date().getTime());
+    setTimeout(() => {
+      setGameToComplete(room._id, game._id);
+    }, new Date(startTime).getTime() + timeLimit * 1000 - new Date().getTime());
+    res.send({ error: false });
   });
 };
 
@@ -171,13 +201,19 @@ const setGameToStarted = async (roomId: string, gameId: string) => {
   lock.acquire(roomId, async () => {
     const room: Room = (await RoomModel.findById(roomId)) as Room;
     const game: Game = (await GameModel.findById(gameId)) as Game;
+    const question: Question = (await QuestionModel.findById(game.questions[0])) as Question;
+    console.log(question);
+    question.answer = undefined;
     room.inProgress = true;
     game.status = "inProgress";
     await room.save();
     await game.save();
     const updatedRoom = await getLobbyRoom(room);
     socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
-    socketManager.getIo().in(roomId).emit("inProgress", { question: game.questions[0] });
+    socketManager
+      .getIo()
+      .in("" + roomId)
+      .emit("inProgress", { question, endTime: fromTime(game.startTime, timeLimit) });
   });
 };
 
@@ -188,10 +224,13 @@ const setGameToComplete = async (roomId: string, gameId: string) => {
     room.inProgress = false;
     game.status = "complete";
     await room.save();
-    await game.save();
+    const savedGame = await game.save();
     const updatedRoom = await getLobbyRoom(room);
     socketManager.getIo().in("Lobby").emit("updateRoom", updatedRoom);
-    socketManager.getIo().in(roomId).emit("complete", {});
+    socketManager
+      .getIo()
+      .in("" + roomId)
+      .emit("complete", { scores: savedGame.scores });
   });
 };
 
@@ -214,12 +253,23 @@ const guess = (
           game.questions[game.scores[index].questionNumber + 1]
         )) as Question)) ||
       undefined;
+    if (nextQuestion) {
+      nextQuestion.answer = undefined;
+    }
     game.scores[index]["questionNumber"] += correct ? 1 : 0;
     game.scores[index]["score"] += correct ? 1 : 0;
     game.markModified("scores");
     const savedGame: Game = await game.save();
     const data: guessSocketEmitType = { roomId: room._id, scores: savedGame.scores };
-    socketManager.getIo().in(room._id).emit("guess", data);
+    socketManager
+      .getIo()
+      .in("" + room._id)
+      .emit("guess", data);
+    if (correct) {
+      console.log("CORRECT!");
+    } else {
+      console.log(`No, ${req.body.answer} is not ${question.answer}`);
+    }
     res.status(200).json({
       question: (correct && nextQuestion) || undefined,
       correct,

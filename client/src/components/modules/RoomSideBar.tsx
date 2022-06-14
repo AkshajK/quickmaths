@@ -34,7 +34,7 @@ const RoomSideBar = (props: RoomSideBarProps) => {
       <Typography
         variant="h5"
         align="center"
-        color="#306AFF"
+        color="#000000"
         sx={{ fontWeight: "bold", marginRight: "6px" }}
       >
         {props.levelName}

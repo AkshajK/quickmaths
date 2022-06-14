@@ -3,10 +3,12 @@ import { Router } from "@reach/router";
 import NotFound from "./pages/NotFound";
 import Skeleton from "./pages/Skeleton";
 import LobbyPage from "./pages/LobbyPage";
+import RoomPage from "./pages/RoomPage";
 import "../utilities.css";
 
 import { socket } from "../client-socket";
-
+import Cookies from "universal-cookie";
+const cookies = new Cookies();
 import { get, post } from "../utilities";
 
 /**
@@ -14,21 +16,44 @@ import { get, post } from "../utilities";
  */
 const App = () => {
   const [userId, setUserId] = useState(undefined);
-
+  const [loggedInGoogle, setLoggedInGoogle] = useState(false);
   useEffect(() => {
+    let token = cookies.get("cookieToken");
     get("/api/whoami").then((user) => {
       if (user._id) {
         // they are registed in the database, and currently logged in.
         setUserId(user._id);
+        setLoggedInGoogle(user.googleid ? true : false);
+      } else {
+        post("/api/login", { cookieToken: token || "no token" }).then((user) => {
+          post("/api/initsocket", { socketid: socket.id }).then(() => {
+            setUserId(user._id);
+            setLoggedInGoogle(user.googleid ? true : false);
+            if (!token)
+              cookies.set("cookieToken", user.cookieToken, {
+                expires: new Date("December 17, 2030 03:24:00"),
+              });
+          });
+        });
       }
     });
   }, []);
 
   const handleLogin = (res) => {
     const userToken = res.credential;
-    post("/api/login", { token: userToken }).then((user) => {
-      window.location.reload();
-    });
+    let token = cookies.get("cookieToken");
+    post("/api/googleLogin", { token: userToken, cookieToken: token || "no token" }).then(
+      (user) => {
+        post("/api/initsocket", { socketid: socket.id }).then(() => {
+          setUserId(user._id);
+          setLoggedInGoogle(user.googleid ? true : false);
+          if (!token)
+            cookies.set("cookieToken", user.cookieToken, {
+              expires: new Date("December 17, 2030 03:24:00"),
+            });
+        });
+      }
+    );
   };
 
   const handleLogout = () => {
@@ -38,7 +63,20 @@ const App = () => {
   return (
     <>
       <Router>
-        <LobbyPage path="/" handleLogin={handleLogin} handleLogout={handleLogout} userId={userId} />
+        <LobbyPage
+          path="/"
+          handleLogin={handleLogin}
+          handleLogout={handleLogout}
+          loggedInGoogle={loggedInGoogle}
+          userId={userId}
+        />
+        <RoomPage
+          path="/:roomName"
+          userId={userId}
+          loggedInGoogle={loggedInGoogle}
+          handleLogin={handleLogin}
+          handleLogout={handleLogout}
+        />
         <Skeleton
           path="/login"
           handleLogin={handleLogin}

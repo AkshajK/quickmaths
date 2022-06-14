@@ -29,6 +29,7 @@ import {
   lock,
   Leaderboard,
   getLobbyRoom,
+  removeUserFromRoom,
 } from "../../shared/apiTypes";
 import socketManager from "../server-socket";
 
@@ -39,28 +40,37 @@ const joinLobbyPage = async (
   res: TypedResponse<joinLobbyPageResponseType | string>
 ) => {
   const myUserId: string = req.user?._id as string;
-  socketManager.getSocketFromUserID(myUserId)?.join("Lobby") ?? console.log("Error: No socket");
-  const levels: Level[] = await LevelModel.find({});
-  const condensedLevels = levels.map((level) => ({ _id: level._id, title: level.title }));
+  lock.acquire("Lobby", async () => {
+    socketManager.getSocketFromUserID(myUserId)?.join("Lobby");
+    const levels: Level[] = await LevelModel.find({});
+    const condensedLevels = levels.map((level) => ({ _id: level._id, title: level.title }));
 
-  const rooms: Room[] = await RoomModel.find({});
-  const condensedRooms: LobbyRoom[] = await Promise.all(rooms.map((room) => getLobbyRoom(room)));
+    const rooms: Room[] = await RoomModel.find({});
+    const condensedRooms: LobbyRoom[] = await Promise.all(rooms.map((room) => getLobbyRoom(room)));
 
-  const user = (await UserModel.findById(myUserId)) as User;
-  const entry: { rating: number; highScore: number; levelId: string } | undefined = user.data.find(
-    (dataEntry) => (req.body.levelId ? dataEntry.levelId === req.body.levelId : true)
-  );
-  res.status(200).json({
-    leaderboard,
-    levels: condensedLevels,
-    levelId: entry?.levelId || levels[0]._id,
-    rooms: condensedRooms,
-    userInfo: {
-      _id: user._id,
-      name: user.name,
-      rating: entry?.rating || 1200,
-      highScore: entry?.highScore || 0,
-    },
+    const user = (await UserModel.findById(myUserId)) as User;
+    if (user.roomId !== "Lobby") {
+      const oldRoom: Room = (await RoomModel.findById(user.roomId)) as Room;
+      await removeUserFromRoom(oldRoom, user._id, socketManager.getIo());
+    }
+    user.roomId = "Lobby";
+    await user.save();
+    const entry: { rating: number; highScore: number; levelId: string } | undefined =
+      user.data.find((dataEntry) =>
+        req.body.levelId ? dataEntry.levelId === req.body.levelId : true
+      );
+    res.status(200).json({
+      leaderboard,
+      levels: condensedLevels,
+      levelId: entry?.levelId || levels[0]._id,
+      rooms: condensedRooms,
+      userInfo: {
+        _id: user._id,
+        name: user.name,
+        rating: entry?.rating || 1200,
+        highScore: entry?.highScore || 0,
+      },
+    });
   });
 };
 

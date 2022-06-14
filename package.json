@@ -28,6 +28,7 @@
     "connect-ensure-login": "^0.1.1",
     "core-js": "^3.8.1",
     "crypto-random-string": "^5.0.0",
+    "cute-animals": "^0.2.3",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-session": "^1.17.3",
@@ -45,6 +46,7 @@
     "socket.io-client": "^4.5.1",
     "ts-loader": "^9.3.0",
     "ts-node": "^10.8.0",
+    "universal-cookie": "^4.0.4",
     "url-loader": "^4.1.1"
   },
   "devDependencies": {

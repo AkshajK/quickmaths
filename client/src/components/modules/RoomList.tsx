@@ -24,7 +24,7 @@ import Paper from "@mui/material/Paper";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.common.black,
+    backgroundColor: "#306AFF",
     color: theme.palette.common.white,
   },
   [`&.${tableCellClasses.body}`]: {
@@ -73,7 +73,7 @@ const RoomList = (props: RoomListProps) => {
               <StyledTableCell align="right">
                 {room.inProgress ? "In Progress" : "Open"}
               </StyledTableCell>
-              <StyledTableCell align="right">{`${room.players} players`}</StyledTableCell>
+              <StyledTableCell align="right">{`${room.players}`}</StyledTableCell>
               <StyledTableCell align="right">
                 {new Date(room.lastActive).toDateString()}
               </StyledTableCell>

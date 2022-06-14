@@ -13,7 +13,7 @@ import {
 
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-
+import Paper from "@mui/material/Paper";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
@@ -28,31 +28,29 @@ type UserInfoProps = {
 
 const UserInfo = (props: UserInfoProps) => {
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h5" component="div" gutterBottom>
-          {props.name}
-        </Typography>
-        <Grid container direction="column" width="100%">
-          <Box width="50%">
-            <Typography sx={{ mb: 1.5 }} color="text.secondary">
-              Rating
-            </Typography>
-            <Typography variant="h5" component="div" gutterBottom color="#306AFF">
-              {props.rating}
-            </Typography>
-          </Box>
-          <Box width="50%">
-            <Typography sx={{ mb: 1.5 }} color="text.secondary">
-              High Score
-            </Typography>
-            <Typography variant="h5" component="div" gutterBottom color="#306AFF">
-              {props.highScore}
-            </Typography>
-          </Box>
-        </Grid>
-      </CardContent>
-    </Card>
+    <Box margin="10px" marginTop="20px" marginBottom="0px">
+      <Typography variant="h5" component="div" gutterBottom>
+        {props.name}
+      </Typography>
+      <Grid container direction="row" width="100%">
+        <Box width="50%">
+          <Typography sx={{ mb: 0.5 }} color="text.secondary">
+            Rating
+          </Typography>
+          <Typography variant="h5" component="div" color="#306AFF">
+            {props.rating}
+          </Typography>
+        </Box>
+        <Box width="50%">
+          <Typography sx={{ mb: 0.5 }} color="text.secondary">
+            High Score
+          </Typography>
+          <Typography variant="h5" component="div" color="#306AFF">
+            {props.highScore}
+          </Typography>
+        </Box>
+      </Grid>
+    </Box>
   );
 };
 

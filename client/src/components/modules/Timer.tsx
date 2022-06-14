@@ -32,7 +32,8 @@ const Timer = (props: TimerProps) => {
         100,
         Math.max(
           0,
-          ((new Date(props.endTime).getTime() - new Date().getTime()) / props.totalSeconds) * 100
+          ((new Date(props.endTime).getTime() - new Date().getTime()) / props.totalSeconds / 1000) *
+            100
         )
       );
       setPercentage(props.backwards ? newPercentage : 100 - newPercentage);
@@ -44,7 +45,7 @@ const Timer = (props: TimerProps) => {
   const color = `hsl(${Math.floor(new Date().getTime() / 50) % 360}, 100%, 50%)`;
   return (
     <Grid container direction="column" width="100%" justifyContent="center">
-      <CircularProgress variant="determinate" value={25} color="secondary" />
+      <CircularProgress variant="determinate" value={percentage} color="secondary" />
     </Grid>
   );
 };

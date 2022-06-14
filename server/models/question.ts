@@ -3,14 +3,14 @@ import { Schema, model, Document } from "mongoose";
 const QuestionSchema = new Schema({
   number: Number,
   prompt: String,
-  answer: Number,
+  answer: String,
   questionTypeId: String,
 });
 
 export interface Question extends Document {
   number: number;
   prompt: string;
-  answer?: number;
+  answer?: string;
   questionTypeId: string;
   _id: string;
 }

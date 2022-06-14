@@ -37,10 +37,17 @@ const Chat = (props: ChatProps) => {
   const text = (message: Message) => <div style={{ display: "inline" }}>{": " + message.text}</div>;
   return (
     <Grid container direction="column">
-      <Box display="flex" flexDirection="column-reverse" overflow="auto" marginBottom="auto">
+      <Box
+        display="flex"
+        flexDirection="column-reverse"
+        overflow="auto"
+        marginBottom="auto"
+        height="calc(100vh - 180px)"
+        marginTop="20px"
+      >
         <List>
           {props.messages.map((message) => (
-            <ListItem dense>
+            <ListItem dense key={message._id}>
               <ListItemText>
                 {name(message)} {text(message)}
               </ListItemText>

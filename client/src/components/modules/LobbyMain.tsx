@@ -33,7 +33,7 @@ const LobbyMain = (props: LobbyMainProps) => {
   return (
     <Grid container direction="column">
       {props.level && (
-        <Grid container direction="row" width="100%">
+        <Grid container direction="row" width="100%" marginBottom="10px">
           <Box width="50%">
             <Button fullWidth color="primary" onClick={newRoom}>
               {`New ${props.level.title} Game`}
