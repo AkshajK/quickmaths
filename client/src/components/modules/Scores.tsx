@@ -13,7 +13,7 @@ import {
   Leaderboard,
   LobbyLevel,
 } from "../../../../shared/apiTypes";
-
+import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
 import { styled } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import LinearProgress, { linearProgressClasses } from "@mui/material/LinearProgress";
@@ -40,30 +40,36 @@ const BorderLinearProgress = styled(LinearProgress)<{ special: boolean }>(({ the
     backgroundColor: special ? "#FF32DE" : theme.palette.mode === "light" ? "#1a90ff" : "#308fe8",
   },
 }));
-const getListItem = (isCurrentUser: boolean, name: string, score: number, max: number) => (
-  <ListItem key={name}>
-    <Grid container direction="row" justifyContent="center" alignItems="center">
-      <Box width="150px">
-        <ListItemText
-          primary={name}
-          primaryTypographyProps={{
-            color: isCurrentUser ? "#FF32DE" : "#306AFF",
-            fontWeight: isCurrentUser ? "bold" : undefined,
-          }}
-          secondary={score > 0 && score}
-        />
-      </Box>
-      <Box width="calc(100% - 150px)">
-        <BorderLinearProgress
-          special={isCurrentUser}
-          color={score === max ? "primary" : "primary"}
-          variant="determinate"
-          value={(100.0 * score) / Math.max(10, max)}
-        />
-      </Box>
-    </Grid>
-  </ListItem>
-);
+const getListItem = (isCurrentUser: boolean, name: string, score: number, max: number) => {
+  const percent = (100.0 * score) / Math.max(10, max);
+  return (
+    <ListItem key={name}>
+      <Grid container direction="row" justifyContent="center" alignItems="center">
+        <Box width="150px">
+          <ListItemText
+            primary={name}
+            primaryTypographyProps={{
+              color: isCurrentUser ? "#FF32DE" : "#306AFF",
+              fontWeight: isCurrentUser ? "bold" : undefined,
+            }}
+            secondary={score > 0 && score}
+          />
+        </Box>
+        <Box width="calc(100% - 150px)">
+          <Box marginLeft={`calc(${percent}% - 20px)`} style={{ transition: "all 0.75s ease" }}>
+            <DirectionsBikeIcon
+              fontSize="large"
+              style={{
+                color: isCurrentUser ? "#FF32DE" : "#1a90ff",
+              }}
+            />
+          </Box>
+          <BorderLinearProgress special={isCurrentUser} variant="determinate" value={percent} />
+        </Box>
+      </Grid>
+    </ListItem>
+  );
+};
 const Scores = (props: ScoresProps) => {
   const [max, setMax] = React.useState(1);
   useEffect(() => {

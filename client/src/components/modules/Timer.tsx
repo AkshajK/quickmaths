@@ -17,7 +17,8 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
-
+import LinearProgress from "@mui/material/LinearProgress";
+import { Progress } from "antd";
 type TimerProps = {
   endTime: Date;
   totalSeconds: number;
@@ -27,17 +28,22 @@ type TimerProps = {
 const Timer = (props: TimerProps) => {
   const [percentage, setPercentage] = useState(100);
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newPercentage = Math.min(
-        100,
-        Math.max(
-          0,
-          ((new Date(props.endTime).getTime() - new Date().getTime()) / props.totalSeconds / 1000) *
-            100
-        )
-      );
-      setPercentage(props.backwards ? newPercentage : 100 - newPercentage);
-    }, 100);
+    const interval = setInterval(
+      () => {
+        const newPercentage = Math.min(
+          100,
+          Math.max(
+            0,
+            ((new Date(props.endTime).getTime() - new Date().getTime()) /
+              props.totalSeconds /
+              1000) *
+              100
+          )
+        );
+        setPercentage(props.backwards ? newPercentage : 100 - newPercentage);
+      },
+      props.totalSeconds < 5 ? 10 : 50
+    );
     return () => {
       clearInterval(interval);
     };
@@ -45,7 +51,15 @@ const Timer = (props: TimerProps) => {
   const color = `hsl(${Math.floor(new Date().getTime() / 50) % 360}, 100%, 50%)`;
   return (
     <Grid container direction="column" width="100%" justifyContent="center">
-      <CircularProgress variant="determinate" value={percentage} color="secondary" />
+      <Progress
+        percent={percentage}
+        showInfo={false}
+        strokeLinecap="round"
+        trailColor="#616161"
+        strokeColor={color}
+        strokeWidth={20}
+        style={{ marginTop: "-20px", marginBottom: "5px", marginLeft: "-20px" }}
+      />
     </Grid>
   );
 };

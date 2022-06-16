@@ -5,7 +5,7 @@ import Skeleton from "./pages/Skeleton";
 import LobbyPage from "./pages/LobbyPage";
 import RoomPage from "./pages/RoomPage";
 import "../utilities.css";
-
+import "antd/dist/antd.css";
 import { socket } from "../client-socket";
 import Cookies from "universal-cookie";
 const cookies = new Cookies();
@@ -16,7 +16,8 @@ import { get, post } from "../utilities";
  */
 const App = () => {
   const [userId, setUserId] = useState(undefined);
-  const [loggedInGoogle, setLoggedInGoogle] = useState(false);
+  const [loggedInGoogle, setLoggedInGoogle] = useState<boolean>(false);
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
   useEffect(() => {
     let token = cookies.get("cookieToken");
     get("/api/whoami").then((user) => {
@@ -38,6 +39,24 @@ const App = () => {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    socket.on("disconnect", () => {
+      setSocketConnected(false);
+      setTimeout(() => {
+        if (!socketConnected) {
+          window.location.reload();
+        }
+      }, 2000);
+    });
+  }, [userId]);
+  useEffect(() => {
+    if (!userId) return;
+    socket.on("connect", () => {
+      setSocketConnected(true);
+    });
+  }, [userId]);
 
   const handleLogin = (res) => {
     const userToken = res.credential;

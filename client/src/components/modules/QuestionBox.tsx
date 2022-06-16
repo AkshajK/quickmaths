@@ -29,11 +29,13 @@ const QuestionBox = (props: QuestionBoxProps) => {
 
   return (
     <Grid container direction="column" justifyContent="center">
-      <Box width="100%">
-        <Typography variant="h5">{`Q${props.question?.number}`}</Typography>
+      <Box width="100%" marginTop="10px">
+        <Typography variant="h6" color="#306AFF">{`Question ${
+          props.question?.number + 1
+        }`}</Typography>
       </Box>
-      <Box>
-        <Typography variant="h6" component="span">
+      <Box marginTop="10px" marginBottom="10px">
+        <Typography variant="h5" component="span">
           {props.question?.prompt}
         </Typography>
       </Box>
@@ -43,6 +45,7 @@ const QuestionBox = (props: QuestionBoxProps) => {
         onChange={(event) => {
           setUserAnswer(event.target.value);
         }}
+        autoFocus
         onKeyPress={(event) => {
           if (event.key === "Enter") {
             if (new Date().getTime() - new Date(lastGuess).getTime() >= 100) {

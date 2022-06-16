@@ -39,6 +39,7 @@ router.post("/initsocket", (req: any, res) => {
 // |------------------------------|
 // | write your API methods below!|
 // |------------------------------|
+roomCalls.initializeRooms();
 
 router.post("/joinLobbyPage", lobbyCalls.joinLobbyPage);
 router.post("/createRoom", lobbyCalls.createRoom);

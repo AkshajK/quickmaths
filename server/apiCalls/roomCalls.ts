@@ -43,6 +43,21 @@ const fromNow = (seconds: number): Date => new Date(new Date().getTime() + secon
 const fromTime = (date: Date, seconds: number): Date =>
   new Date(new Date(date).getTime() + seconds * 1000);
 
+const initializeRooms = async () => {
+  const rooms = await RoomModel.find({});
+  await Promise.all(
+    rooms.map((room) => {
+      lock.acquire(room._id, async () => {
+        room.gameId = room.gameId.concat(["server died"]);
+        room.users = [];
+        room.spectatingUsers = [];
+        room.inProgress = false;
+        await room.save();
+      });
+    })
+  );
+};
+
 const joinRoomPage = async (
   req: TypedRequestBody<joinRoomPageRequestBodyType>,
   res: TypedResponse<joinRoomPageResponseType | string>
@@ -76,7 +91,10 @@ const joinRoomPage = async (
     socketManager.getSocketFromUserID(myUserId)?.join("" + room._id);
     const gameId = room.gameId.slice(-1)[0];
     const game: Game | undefined =
-      (gameId !== undefined && ((await GameModel.findById(gameId)) as Game)) || undefined;
+      (gameId !== undefined &&
+        gameId !== "server died" &&
+        ((await GameModel.findById(gameId)) as Game)) ||
+      undefined;
     const level = (await LevelModel.findById(room.levelId)) as Level;
     const status = !game ? "waiting" : game.status;
     const yourScore = game?.scores?.find((score) => score.userId === myUserId)?.score || 0;
@@ -177,7 +195,7 @@ const startGame = (
 
     const savedGame = await game.save();
     room.inProgress = true;
-    room.gameId = room.gameId.concat(game._id);
+    room.gameId = room.gameId.concat(savedGame._id);
     room.lastActive = new Date();
     await room.save();
     const data: startGameSocketEmitType = { startTime, scores };
@@ -301,4 +319,5 @@ export default {
   startGame,
   guess,
   message,
+  initializeRooms,
 };
