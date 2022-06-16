@@ -22,11 +22,12 @@ import Button from "@mui/material/Button";
 import Timer from "./Timer";
 import QuestionBox from "./QuestionBox";
 import Scores from "./Scores";
-
+import Watchers from "./Watchers";
 type RoomMainProps = {
   status: "waiting" | "aboutToStart" | "inProgress" | "complete";
   scores: Score[];
   users: RoomUser[];
+  watchers: RoomUser[];
   startTime: Date;
   question?: Question;
   roomId: string;
@@ -44,6 +45,7 @@ const RoomMain = (props: RoomMainProps) => {
       return (
         <Grid container direction="column">
           <Scores users={props.users} userId={props.userId} />
+          <Watchers watchers={props.watchers} />
           <Button fullWidth onClick={startGame}>
             Start Game
           </Button>
@@ -54,6 +56,7 @@ const RoomMain = (props: RoomMainProps) => {
         <Grid container direction="column">
           <Timer backwards endTime={props.startTime} totalSeconds={3} />
           <Scores scores={props.scores} userId={props.userId} />
+          <Watchers watchers={props.watchers} />
           <Button disabled fullWidth>
             Start Game
           </Button>
@@ -65,12 +68,14 @@ const RoomMain = (props: RoomMainProps) => {
           <Timer endTime={props.startTime} totalSeconds={30} />
           <QuestionBox question={props.question} guess={props.guess} />
           <Scores scores={props.scores} userId={props.userId} />
+          <Watchers watchers={props.watchers} />
         </Grid>
       );
     case "complete":
       return (
         <Grid container direction="column">
           <Scores scores={props.scores} userId={props.userId} users={props.users} />
+          <Watchers watchers={props.watchers} />
           <Button fullWidth onClick={startGame}>
             Rematch
           </Button>

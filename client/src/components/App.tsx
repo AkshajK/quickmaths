@@ -4,6 +4,7 @@ import NotFound from "./pages/NotFound";
 import Skeleton from "./pages/Skeleton";
 import LobbyPage from "./pages/LobbyPage";
 import RoomPage from "./pages/RoomPage";
+import ForceDisconnected from "./pages/ForceDisconnected";
 import "../utilities.css";
 import "antd/dist/antd.css";
 import { socket } from "../client-socket";
@@ -18,6 +19,7 @@ const App = () => {
   const [userId, setUserId] = useState(undefined);
   const [loggedInGoogle, setLoggedInGoogle] = useState<boolean>(false);
   const [socketConnected, setSocketConnected] = useState<boolean>(false);
+  const [forceDisconnected, setForceDisconnected] = useState<boolean>(false);
   useEffect(() => {
     let token = cookies.get("cookieToken");
     get("/api/whoami").then((user) => {
@@ -42,13 +44,17 @@ const App = () => {
 
   useEffect(() => {
     if (!userId) return;
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
       setSocketConnected(false);
-      setTimeout(() => {
-        if (!socketConnected) {
-          window.location.reload();
-        }
-      }, 2000);
+      if (reason === "io server disconnect") {
+        setForceDisconnected(true);
+      } else {
+        setTimeout(() => {
+          if (!socketConnected) {
+            window.location.reload();
+          }
+        }, 2000);
+      }
     });
   }, [userId]);
   useEffect(() => {
@@ -79,6 +85,7 @@ const App = () => {
     setUserId(undefined);
     post("/api/logout");
   };
+  if (forceDisconnected) return <ForceDisconnected />;
   return (
     <>
       <Router>

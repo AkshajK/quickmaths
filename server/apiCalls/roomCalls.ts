@@ -31,6 +31,7 @@ import {
   getLobbyRoom,
   removeUserFromRoom,
 } from "../../shared/apiTypes";
+import mongoose from "mongoose";
 import UserModel from "../models/user";
 import RoomModel from "../models/room";
 import GameModel from "../models/game";
@@ -159,6 +160,7 @@ const startGame = (
   const myUserId: string = req.user?._id as string;
   lock.acquire(req.body.roomId, async () => {
     const room: Room = (await RoomModel.findById(req.body.roomId)) as Room;
+    if (room.inProgress) return;
     const level: Level = (await LevelModel.findById(room.levelId)) as Level;
     const roomUsers = (await UserModel.find({ _id: { $in: room.users } })) as User[];
     /** TODO: Replace with actual question generation code */
@@ -223,6 +225,7 @@ const setGameToStarted = async (roomId: string, gameId: string) => {
     console.log(question);
     question.answer = undefined;
     room.inProgress = true;
+    if (game.status === "inProgress") return;
     game.status = "inProgress";
     await room.save();
     await game.save();
@@ -249,7 +252,53 @@ const setGameToComplete = async (roomId: string, gameId: string) => {
       .getIo()
       .in("" + roomId)
       .emit("complete", { scores: savedGame.scores });
+    await updateRatingsAndHighScores(room.levelId, savedGame.scores);
   });
+};
+
+const updateRatingsAndHighScores = async (levelId: string, scores: Score[]) => {
+  const k = 60 / scores.length;
+  // @ts-ignore
+  const users = await UserModel.find({
+    _id: { $in: scores.map((entry) => mongoose.Types.ObjectId(entry.userId)) },
+  });
+  const userData = {};
+  users.map((user) => {
+    const curData = user.data.find((dataEntry) => dataEntry.levelId === levelId) || {
+      rating: 1200,
+      highScore: 0,
+      levelId,
+    };
+    userData[user._id] = curData;
+  });
+  const newRatings = {};
+  const scoresObj = {};
+  users.map((user) => {
+    const currentRating = userData[user._id].rating;
+    let update = 0.5;
+    const score = scores.find((entry) => entry.userId === user._id).score;
+    scoresObj[user._id] = score;
+    scores.forEach((scoreEntry) => {
+      const constant = score < scoreEntry.score ? 0 : score > scoreEntry.score ? 1 : 0.5;
+      const p =
+        1.0 / (1.0 + Math.pow(10, (userData[scoreEntry.userId].rating - currentRating) / 400.0));
+      update += k * (constant - p);
+    });
+
+    newRatings[user._id] = currentRating + update;
+  });
+
+  await Promise.all(
+    users.map(async (user) => {
+      const newDataEntry = {
+        rating: newRatings[user._id],
+        highScore: Math.max(scoresObj[user._id], userData[user._id].highScore),
+        levelId,
+      };
+      user.data = user.data.filter((entry) => entry.levelId !== levelId).concat([newDataEntry]);
+      await user.save();
+    })
+  );
 };
 
 const guess = (

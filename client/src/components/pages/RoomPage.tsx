@@ -183,6 +183,13 @@ const RoomPage = (props: RoomPageProps) => {
           question={question}
           guess={guess}
           userId={userId}
+          watchers={users.filter((user) => {
+            return scores.find((entry) => {
+              entry.userId === user._id;
+            })
+              ? false
+              : true;
+          })}
         />
       </Box>
       <Box width="250px" padding="20px">
