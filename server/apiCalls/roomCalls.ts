@@ -262,43 +262,56 @@ const updateRatingsAndHighScores = async (levelId: string, scores: Score[]) => {
   const users = await UserModel.find({
     _id: { $in: scores.map((entry) => mongoose.Types.ObjectId(entry.userId)) },
   });
-  const userData = {};
+  const userData: Map<string, { rating: number; highScore: number; levelId: string }> = new Map<
+    string,
+    { rating: number; highScore: number; levelId: string }
+  >();
   users.map((user) => {
     const curData = user.data.find((dataEntry) => dataEntry.levelId === levelId) || {
       rating: 1200,
       highScore: 0,
       levelId,
     };
-    userData[user._id] = curData;
+    userData.set(user._id + "", curData);
   });
-  const newRatings = {};
-  const scoresObj = {};
+  const newRatings: Map<string, number> = new Map<string, number>();
+  const scoresObj: Map<string, number> = new Map<string, number>();
   users.map((user) => {
-    const currentRating = userData[user._id].rating;
+    const currentRating = userData.get("" + user._id)?.rating || 1200;
     let update = 0.5;
-    const score = scores.find((entry) => entry.userId === user._id).score;
-    scoresObj[user._id] = score;
+    const score = scores.find((entry) => entry.userId === user._id + "")?.score || 0;
+    scoresObj.set(user._id + "", score);
     scores.forEach((scoreEntry) => {
       const constant = score < scoreEntry.score ? 0 : score > scoreEntry.score ? 1 : 0.5;
       const p =
-        1.0 / (1.0 + Math.pow(10, (userData[scoreEntry.userId].rating - currentRating) / 400.0));
+        1.0 /
+        (1.0 +
+          Math.pow(
+            10,
+            (userData.get(scoreEntry.userId + "")?.rating || 1200 - currentRating) / 400.0
+          ));
       update += k * (constant - p);
     });
 
-    newRatings[user._id] = currentRating + update;
+    newRatings.set(user._id + "", currentRating + update);
   });
 
   await Promise.all(
     users.map(async (user) => {
-      const newDataEntry = {
-        rating: newRatings[user._id],
-        highScore: Math.max(scoresObj[user._id], userData[user._id].highScore),
+      const newDataEntry: { rating: number; highScore: number; levelId: string } = {
+        rating: newRatings.get(user._id + "") || 1200,
+        highScore: Math.max(
+          scoresObj.get(user._id + "") || 0,
+          userData.get(user._id + "")?.highScore || 0
+        ),
         levelId,
       };
       user.data = user.data.filter((entry) => entry.levelId !== levelId).concat([newDataEntry]);
       await user.save();
     })
   );
+  console.log(scoresObj);
+  console.log(newRatings);
 };
 
 const guess = (

@@ -38,7 +38,7 @@ const UserInfo = (props: UserInfoProps) => {
             Rating
           </Typography>
           <Typography variant="h5" component="div" color="#306AFF">
-            {props.rating}
+            {Math.round(props.rating)}
           </Typography>
         </Box>
         <Box width="50%">

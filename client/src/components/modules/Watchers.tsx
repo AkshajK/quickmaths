@@ -30,12 +30,12 @@ type WatchersProps = {
 const Watchers = (props: WatchersProps) => {
   const watcherElements = props.watchers.map((watcher) => {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center">
-        <DirectionsBikeIcon fontSize="large" />
-        <Typography variant="h6" align="center" sx={{ fontWeight: "bold" }}>
+      <Grid display="flex" justifyContent="center" alignItems="center" flexDirection="column">
+        <DirectionsBikeIcon fontSize="medium" />
+        <Typography variant="body2" align="center" sx={{ fontWeight: "bold" }}>
           {watcher.name}
         </Typography>
-      </Box>
+      </Grid>
     );
   });
   return (
